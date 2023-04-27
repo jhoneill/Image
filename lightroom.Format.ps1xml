@@ -1,0 +1,90 @@
+﻿<?xml version="1.0" encoding="utf-16"?>
+<Configuration>
+  <ViewDefinitions>
+    <View>
+      <Name>LightRoomItem</Name>
+      <ViewSelectedBy>
+        <TypeName>LightRoomItem</TypeName>
+      </ViewSelectedBy>
+      <ListControl>
+        <ListEntries>
+          <ListEntry>
+            <ListItems>
+              <ListItem>
+                <PropertyName>Path</PropertyName>
+              </ListItem>
+               <ListItem>
+                <Label>Colour Labels</Label>
+                <PropertyName>ColorLabels</PropertyName>
+               </ListItem>
+               <ListItem>
+                <Label>Rating</Label>
+                <ScriptBlock>
+                    "*" * $_.Rating
+                </ScriptBlock>
+              </ListItem>
+              <ListItem>
+                <Label>Flag</Label>
+                <ScriptBlock>
+                    if ($_.pick -eq "-1") {"Reject"} elseif ($_.pick -eq "1") {"Pick"} else {""}
+                </ScriptBlock>
+              </ListItem>
+              <ListItem>
+                <Label>Caption</Label>
+                <PropertyName>Caption</PropertyName>
+              </ListItem>
+              <ListItem>
+                 <Label>Date Taken</Label>
+                 <ScriptBlock>
+                    [dateTime]$_.dateTaken
+                </ScriptBlock>
+              </ListItem>
+              <ListItem>
+                <Label>GPS Latitude</Label>
+                <PropertyName>GPSLatitude</PropertyName>
+              </ListItem>
+              <ListItem>
+                <Label>GPS Longitude</Label>
+                <PropertyName>GPSLongitude</PropertyName>
+              </ListItem>
+              <ListItem>
+                <Label>Camera Model</Label>
+                <PropertyName>CameraModel</PropertyName>
+              </ListItem>
+              <ListItem>
+                <Label>Lens Model</Label>
+                <PropertyName>LensModel</PropertyName>
+              </ListItem>
+              <ListItem>
+                <Label>Focal Length</Label>
+                <ScriptBlock>
+                    if ([double]$_.focalLength) {"{0:#.#}mm" -f [Double]$_.FocalLength}
+                </ScriptBlock>
+              </ListItem>
+              <ListItem>
+                <Label>F/ Number</Label>
+                <ScriptBlock>
+                    if ([double]$_.fnumber) {"f/{0:#.#}" -f $_.FNumber}
+                </ScriptBlock>
+              </ListItem>
+              <ListItem>
+                <Label>Exposure Time</Label>
+                 <ScriptBlock>
+                    if ($_.ExposureTime -le 0.25) {"1/{0:N0}" -f (1/$_.ExposureTime)} else {"{0:0.##}" -f $_.ExposureTime}
+                </ScriptBlock>
+              </ListItem>
+              <ListItem>
+                <Label>ISO Speed</Label>
+                <PropertyName>ISOSpeed</PropertyName>
+              </ListItem>
+              <ListItem>
+                <Label>GrayScale</Label>
+                <PropertyName>grayscale</PropertyName>
+              </ListItem>
+            </ListItems>
+          </ListEntry>
+        </ListEntries>
+      </ListControl>
+    </View>
+  </ViewDefinitions>
+</Configuration>
