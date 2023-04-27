@@ -875,6 +875,7 @@ function Read-EXIF         {
                      $XMLtext           = $XMLtext.trim([char]0)   -replace "(?s)^\s*<\?.*?\?>\s*<","<"  -replace "(?s)>\s+<\?.*?\?\>\s*$",">"
                      $Sw                = New-Object -TypeName System.IO.StringWriter
                      $Writer            = New-Object -TypeName System.Xml.XmlTextWriter -ArgumentList $Sw -Property @{Formatting = [System.xml.formatting]::Indented }
+                     $global:ExifXML    = $null  #So if the $XMLText is not valid XML we get nothing.
                      $global:ExifXML    = [xml]$XMLtext
                      foreach ($Doc in [xml]$exifxml) {
                          $Doc.WriteContentTo($Writer)
