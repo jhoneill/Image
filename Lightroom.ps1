@@ -133,6 +133,17 @@ function Get-LightRoomItem           {
        [parameter(ParameterSetName="WhereLike")]
        [parameter(ParameterSetName="WhereNoLi")]
        [switch]$Exports,
+     # switch to list only printed files - note if specified with exports, -prints is ignored.
+       [parameter(ParameterSetName="Default"  )]
+       [parameter(ParameterSetName="WhereGT"  )]
+       [parameter(ParameterSetName="WhereGE"  )]
+       [parameter(ParameterSetName="WhereEQ"  )]
+       [parameter(ParameterSetName="WhereNE"  )]
+       [parameter(ParameterSetName="WhereLE"  )]
+       [parameter(ParameterSetName="WhereLT"  )]
+       [parameter(ParameterSetName="WhereLike")]
+       [parameter(ParameterSetName="WhereNoLi")]
+       [switch]$Prints,
     # switch to Add Keywords
        [parameter(ParameterSetName="Default"  )]
        [parameter(ParameterSetName="WhereGT"  )]
@@ -218,12 +229,14 @@ function Get-LightRoomItem           {
                 LEFT JOIN   AgInternedExifLens          LensRef  ON    LensRef.id_Local =   metadata.lensRef
                 LEFT JOIN   AgInternedExifCameraModel    Camera  ON     Camera.id_local =  metadata.cameraModelRef
 "@
-        if ($Exports) {$SQL = $SQL + @"
+        if     ($Exports -or $Prints) {$SQL = ($SQL -replace "SELECT ", "SELECT DISTINCT ") + @"
 
                 JOIN        Adobe_libraryImageDevelopHistoryStep history on  image.id_local = history.image
-                WHERE       history.name LIKE 'Export%'
+                WHERE       history.name LIKE '$(if ($Exports) {'Export'} elseif ($Prints) {'Print'})%'
                   AND
-"@      }
+"@
+                if ($Exports -and $Prints)          {Write-Warning "If -Exports and -Prints are both specified, -Prints is ignored."}
+        }
         elseif ($Where -eq "Keyword" -and -not $EQ) {Write-Warning "Keywords only work with -EQ"}
         elseif ($Where -eq "Keyword") {
                         $SQL = $SQL + @"
