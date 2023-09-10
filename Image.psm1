@@ -15,7 +15,7 @@
 . $psScriptRoot\Get-PolaroidBorder.ps1
 . $psScriptRoot\Helper.ps1
 . $psScriptRoot\Lightroom.ps1
-. $psScriptRoot\new-logonBackground.ps1
+#. $psScriptRoot\new-logonBackground.ps1
 . $psScriptRoot\New-overlay.ps1
 . $psScriptRoot\Read-EXIF.ps1
 . $psScriptRoot\Resize-image.ps1

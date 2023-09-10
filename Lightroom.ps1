@@ -1,52 +1,64 @@
-﻿#requires -modules getsql
+﻿#requires -modules getsql -Version 5
 if (-not $env:lrPath ) {
     $env:lrPath  = Join-Path -Path ([environment]::GetFolderPath([System.Environment+SpecialFolder]::MyPictures)) -ChildPath "Lightroom\Catalog-2-v12.lrcat"
 }
 
-if ($PSVersionTable.PSVersion.Major -gt 5 ) {$refAssy = "System.Xml.ReaderWriter"} else {$refAssy = "System.Xml" }
-Add-Type -ReferencedAssemblies $refAssy -TypeDefinition @"
-public struct LightRoomItem
-{
-     public double ApertureValue ;
-     public string BaseName ;
-     public string bitDepth ;
-     public string CameraModel ;
-     public string Caption ;
-     public string colorChannels ;
-     public string ColorLabels ;
-     public string Copyright ;
-     public string DateDay ;
-     public string DateMonth ;
-     public string DateTaken ;
-     public string DateYear ;
-     public string Directory ;
-     public double ExposureTime ;
-     public string Extension ;
-     public string FileFormat ;
-     public int    FlashFired ;
-     public double fNumber ;
-     public string FocalLength ;
-     public string FullName ;
-     public string GPSLatitude ;
-     public string GPSLongitude ;
-     public int    GrayScale ;
-     public int    HasGPS ;
-     public double Height ;
-     public string ID_global ;
-     public int    ID_local ;
-     public double ISOSpeed ;
-     public int    IsRawFile ;
-     public string Keywords ;
-     public string LensModel ;
-     public string Orientation ;
-     public string Path ;
-     public double Rating;
-     public double ShutterSpeedValue ;
-     public double Width ;
-     public System.Xml.XmlElement XAPDescription ;
-     public string XMP ;
+Class LightRoomItem                  {
+    [double]$ApertureValue
+    [string]$BaseName
+    [string]$BitDepth
+    [string]$CameraModel
+    [string]$Caption
+    [string]$ColorChannels
+    [string]$ColorLabels
+    [string]$Copyright
+    [string]$DateDay
+    [string]$DateMonth
+    [string]$DateTaken
+    [string]$DateYear
+    [string]$Directory
+    [double]$ExposureTime
+    [string]$Extension
+    [string]$FileFormat
+    [int]$FlashFired
+    [double]$fNumber
+    [string]$FocalLength
+    [string]$FullName
+    [string]$GPSLatitude
+    [string]$GPSLongitude
+    [int]$GrayScale
+    [int]$HasGPS
+    [double]$Height
+    [string]$ID_global
+    [int]$ID_local
+    [double]$ISOSpeed
+    [int]$IsRawFile
+    [string]$Keywords
+    [string]$LensModel
+    [string]$Orientation
+    [double]$Rating
+    [double]$ShutterSpeedValue
+    [double]$Width
+
+    LightRoomItem()  {}
+    LightRoomItem([System.Data.DataRow]$row ) {
+        foreach ($p in $this.psobject.Properties.Name) {
+                    if ($row.$p -and $row.$p -isnot [dbnull] ) {
+                        $this.$p = $row.$p}
+        }
+    }
+
+    [void]AddToCollection([String]$Collection) {Add-LightRoomCollectionItem -InputObject  $this -Collection $Collection}
+    [void]AddKeyword([string]$Keyword)         {Add-LightRoomItemKeyword    -InputObject  $this -Keyword    $Keyword}
+    [void]SetColor([String]$Colour)            {Set-LightRoomItemColor      -InputObject  $this -Colour     $Colour}
+    [void]SetRating([Int]$Stars)               {Set-LightRoomItemRating     -InputObject  $this -Stars      $Stars}
+    [void]SetFlag([Int]$Flag)                  {Set-LightRoomItemFlag       -InputObject  $this -Flag       $Flag}
+    [void]Rename([string[]]$Replace)           {Rename-LightRoomItem        -Include $this.path -Replace    $Replace}
 }
-"@
+Update-TypeData -TypeName 'LightRoomItem' -MemberType ScriptProperty -MemberName 'Path'         -ea 0 -Value {$this.fullname -replace '/','\'}
+Update-TypeData -TypeName 'LightRoomItem' -MemberType ScriptProperty -MemberName 'fNumber'      -ea 0 -Value {[math]::Round([math]::Sqrt([math]::Pow(2,$this.ApertureValue)),1)}
+Update-TypeData -TypeName 'LightRoomItem' -MemberType ScriptProperty -MemberName 'ExposureTime' -ea 0 -Value {[math]::Round((1/[math]::Pow(2,$this.ShutterSpeedValue)),6)}
+ #  Can no longer do "XAPDescription" -Value {([xml]($this.xmp)).xmpmeta.RDF.Description } |
 
 function Get-LightRoomItem           {
 <#
@@ -162,8 +174,8 @@ function Get-LightRoomItem           {
     $null = Get-SQL -Session LR -Connection $Connection -lite:$lite
   }
   process {
-    foreach ($i in $Include)   {
-        if      ($ListFolders) {
+    foreach     ($i in $Include) {
+        if      ($ListFolders)   {
             $rows = Get-SQL -Session LR  -Quiet -SQL  @"
                 SELECT   RootFolder.absolutePath || Folder.pathFromRoot as Path  , totals.ItemCount
                 FROM     AgLibraryFolder          Folder
@@ -172,11 +184,11 @@ function Get-LightRoomItem           {
                 WHERE    RootFolder.absolutePath || Folder.pathFromRoot like '%$($i -replace "\\","/")%'
                 ORDER BY Path
 "@
-            $rows | ForEach-Object {$_.Path = $_.Path -replace "/","\"}
+            $rows | ForEach-Object {$_.Path = $_.Path -replace "/", [System.IO.Path]::DirectorySeparatorChar}
             return  $rows
         }
-        elseif  ($Values)      {
-            switch ($Values) {
+        elseif  ($Values)        {
+            switch ($Values)   {
                 "CameraModel"  {(Get-SQL -Session LR -Quiet -Distinct -Select value          -OrderBy  value           -Table AgInternedExifCameraModel).value}
                 "Extension"    {(Get-SQL -Session LR -Quiet -Distinct -Select extension      -OrderBy  extension       -Table AgLibraryFile        ).extension}
                 "Fileformat"   {(Get-SQL -Session LR -Quiet -Distinct -Select fileformat     -OrderBy  fileformat      -Table Adobe_images        ).fileformat}
@@ -205,19 +217,19 @@ function Get-LightRoomItem           {
             }
             return
         }
-        else                   {
+        else                     {
             # admetadata.xmp removed  see https://stackoverflow.com/questions/62825586/lightroom-sqlite-database-binary-xmp-format
             $SQL = @"
-                SELECT rootFolder.absolutePath || folder.pathFromRoot || rootfile.baseName || '.' || rootfile.extension       AS fullName,
-                      rootFolder.absolutePath  || folder.pathFromRoot     AS directory,
-                        image.fileFormat         , image.id_global      , image.id_local            , Camera.Value            AS cameraModel,
-                        rootfile.extension       , image.orientation    , Image.fileWidth  AS width , image.fileHeight        AS height ,
-                        metadata.dateDay         , metadata.dateMonth   , metadata.dateYear         , Image.captureTime       AS dateTaken,
-                        metadata.hasGPS          , metadata.GPSLatitude , metadata.GPSLongitude     , metadata.Aperture       AS apertureValue,
-                        metadata.focalLength     , metadata.flashFired  , rootfile.baseName         , metadata.ShutterSpeed   AS shutterSpeedValue,
-                        IPTC.copyright           , IPTC.caption         , settings.grayscale        ,
-                        image.colorLabels        , image.rating         , image.pick                , metadata.ISOSpeedRating AS ISOSpeed,
-                        admetadata.israwFile     , image.bitdepth       , image.colorChannels       , LensRef.value           AS lensModel
+                SELECT      rootFolder.absolutePath || folder.pathFromRoot || rootfile.baseName || '.' || rootfile.extension      AS fullName,
+                            rootFolder.absolutePath || folder.pathFromRoot AS directory,
+                            image.fileFormat         , image.id_global      , image.id_local            , Camera.Value            AS cameraModel,
+                            rootfile.extension       , image.orientation    , Image.fileWidth  AS width , image.fileHeight        AS height ,
+                            metadata.dateDay         , metadata.dateMonth   , metadata.dateYear         , Image.captureTime       AS dateTaken,
+                            metadata.hasGPS          , metadata.GPSLatitude , metadata.GPSLongitude     , metadata.Aperture       AS apertureValue,
+                            metadata.focalLength     , metadata.flashFired  , rootfile.baseName         , metadata.ShutterSpeed   AS shutterSpeedValue,
+                            IPTC.copyright           , IPTC.caption         , settings.grayscale        ,
+                            image.colorLabels        , image.rating         , image.pick                , metadata.ISOSpeedRating AS ISOSpeed,
+                            admetadata.israwFile     , image.bitdepth       , image.colorChannels       , LensRef.value           AS lensModel
                 FROM        AgLibraryIPTC                  IPTC
                 JOIN        Adobe_images                  image  ON      image.id_local =       IPTC.image
                 JOIN        AgLibraryFile              rootFile  ON   rootfile.id_local =      image.rootFile
@@ -250,8 +262,8 @@ function Get-LightRoomItem           {
 
                 WHERE
 "@      }
-             $SQL = $SQL + "       RootFolder.absolutePath || Folder.pathFromRoot || RootFile.baseName || '.' || RootFile.extension  like '%$($i -replace "\\","/" -replace '^\.\\|^\./','')%' " +
-                           "`r`n                ORDER BY    FullName"
+        $SQL = $SQL + "       RootFolder.absolutePath || Folder.pathFromRoot || RootFile.baseName || '.' || RootFile.extension  like '%$($i -replace "\\","/" -replace "\*","%" -replace '^\.\\|^\./','')%' " +
+                    "`r`n                ORDER BY    FullName"
         }
         if      ($Where -and $where -ne 'Keyword')       {
             $Condition = ($GT + $GE +  $EQ + $NE + $LE + $LT + $Like + $NotLike )
@@ -260,13 +272,13 @@ function Get-LightRoomItem           {
                 "Pick"         { $Condition = [convert]::ToInt16( $Condition)    }
                 "Rating"       { $Condition = [convert]::ToDouble($Condition)    }
                 "HasGPS"       { if ([convert]::ToBoolean($eq)) { $Condition = 1 }
-                                else                           { $Condition = 0 }
+                                 else                           { $Condition = 0 }
                             }
                 "IsRawFile"    { if ([convert]::ToBoolean($eq)) { $Condition = 1 }
-                                else                           { $Condition = 0 }
+                                 else                           { $Condition = 0 }
                             } #TimeValue = log2  1/ExposureTimeInSeconds ; stored to 6 digits
                 "ShutterSpeed" { if ($Condition -match "^1/" ) {$Condition = [math]::Round([math]::Log(  ([convert]::ToDouble(($Condition -replace "^1/",""))),2),6)}
-                                else                          {$Condition = [math]::Round([math]::Log((1/[convert]::ToDouble( $Condition                   )),2),6)}
+                                 else                          {$Condition = [math]::Round([math]::Log((1/[convert]::ToDouble( $Condition                   )),2),6)}
                             } #ApertureValue = Log2 ( fnumber squared)  ; stored to 6 digits
                 "Aperture"     { $Condition = [math]::round([math]::log([math]::Pow(($Condition -replace "f/",""),2),2),6) }
                 "DateTaken"    { $Condition = [convert]::ToDateTime($Condition).ToString("yyyy-MM-dd") }
@@ -288,23 +300,18 @@ function Get-LightRoomItem           {
             })
         }
 
-        $rows = @() + (Get-SQL -Session LR -Quiet -SQL $SQL)
+        $rows = @() + (Get-SQL -Session LR -Quiet -SQL $SQL -Verbose:$false)
         Write-Verbose -Message "$SQL `r`nReturned $($rows.count) rows"
-     #  removed Add-Member -PassThru -MemberType ScriptProperty -name "XAPDescription" -Value {([xml]($this.xmp)).xmpmeta.RDF.Description } |
-        $rows | Add-Member -PassThru -MemberType ScriptProperty -name "Path"           -Value {$this.fullname -replace "/","\"}   |
-                Add-Member -PassThru -MemberType ScriptProperty -name "FNumber"        -Value {[math]::Round([math]::Sqrt([math]::Pow(2,$this.ApertureValue)),1)} |
-                Add-Member -PassThru -MemberType ScriptProperty -name "ExposureTime"   -Value {[math]::Round((1/[math]::Pow(2,$this.ShutterSpeedValue)),6)} |
-            ForEach-Object {
-                $_.pstypenames.add("LightRoomItem") ;
-                if (-not $KeyWords) {$_}
+        $rows | ForEach-Object {
+                if (-not $KeyWords) {[LightRoomItem]$_}
                 else {
                     $k =  (Get-SQL -session lr -Quiet -SQL (@"
                             SELECT  AgLibraryKeyword.Name
                             FROM    AgLibraryKeywordImage
                             JOIN    AgLibraryKeyword on AgLibraryKeyword.id_local = AgLibraryKeywordImage.Tag
                             WHERE   image  =  $($_.id_local)
-"@                        )).name -join "; "
-                    Add-Member -InputObject $_ -PassThru -NotePropertyName "Keywords" -NotePropertyValue $K
+"@                  )).name -join "; "
+                    New-Object -TypeName LightRoomItem -ArgumentList $_ -Property @{Keywords=$K}
                 }
             }
     }
@@ -330,7 +337,7 @@ function Get-LightRoomCollectionItem {
   param (
      # Collections to include
        [Parameter(ValueFromPipelineByPropertyName=$true)]
-       [String]$Include  = "",
+       [String[]]$Include  = @(""),
      # Path to the LightRoom catalog file  or  Database connection string  e.g. "DSN=LR" or "Driver={SQLite3 ODBC Driver};Database=<<path>>"
        [alias('Path')]
        $Connection = $env:lrPath
@@ -349,7 +356,7 @@ function Get-LightRoomCollectionItem {
       JOIN     AgLibraryFile            RootFile   ON   Rootfile.id_local = image.rootFile
       JOIN     AgLibraryFolder          Folder     ON     folder.id_local = RootFile.folder
       JOIN     AgLibraryRootFolder      RootFolder ON RootFolder.id_local = Folder.rootFolder
-      WHERE    Collection.name     LIKE '$i%'
+      WHERE    Collection.name    LIKE '$i%'
       ORDER BY CollectionName, FullName
 "@
     $rows = @() + (Get-SQL -Session LR -Quiet -SQL $SQL)
@@ -400,7 +407,7 @@ function Get-LightRoomCollection     {
 
 # AgLibraryCollectionContent defines search / sort settings
 # AgLibraryImport / AgLibraryImportimage
-function Add-LightRoomCollectionItem  {
+function Add-LightRoomCollectionItem {
    <#
   .Synopsis
     Adds existing Lightroom items to a Collection
@@ -411,28 +418,27 @@ function Add-LightRoomCollectionItem  {
       and inserts them into the IG uploads collection
     #>
     [CmdletBinding()]
-    param(
+    param   (
      # Files to include
        [Parameter(ValueFromPipeline=$true,mandatory=$true)]
-       [System.Data.DataRow[]]$InputObject,
+       $InputObject,
        [String]$Collection ,
      # Path to the LightRoom catalog file  or  Database connection string  e.g. "DSN=LR" or "Driver={SQLite3 ODBC Driver};Database=<<path>>"
        [alias('Path')]
-       $Connection = $env:lrPath
+       $Connection      = $env:lrPath
     )
-    begin {
-        $lite  = Test-Path $Connection
-        $null  = Get-SQL -Session LR -Connection $Connection -lite:$lite
+    begin   {
+        $lite           = Test-Path $Connection
+        $null           = Get-SQL -Session LR -Connection $Connection -lite:$lite
 
-        $col   = Get-SQL -Session LR -Table "AgLibraryCollection" -Select id_local,Name -Where "name" -EQ $collection -Quiet
-        $nextid = 2 + ( Get-SQL -Session LR -sql 'select max(id_local) as maxid from AgLibraryCollectionImage' -Quiet ).maxid
+        $col            = Get-SQL -Session LR -Table "AgLibraryCollection" -Select id_local,Name -Where "name" -EQ $collection -Quiet
+        $nextid         = 2 + ( Get-SQL -Session LR -sql 'select max(id_local) as maxid from AgLibraryCollectionImage' -Quiet ).maxid
         if (-not $col.id_local) {throw "Could not find ID for collection $Collection"; return}
-        $existingItems =  @{}
+        $existingItems  =  @{}
         Get-LightRoomCollectionItem -Include $Collection | ForEach-Object {$existingItems[$_.FullName] = $true}
     }
     process {
         if ($existingItems[$InputObject.fullName]) {Write-Verbose "$Collection contained    $($InputObject.fullName)"}
-
         else {
             Get-Sql -Session LR -SQL @"
                 Insert into AgLibraryCollectionimage (id_local, collection, image, pick )
@@ -445,7 +451,7 @@ function Add-LightRoomCollectionItem  {
     }
 }
 
-function Convert-LRSerialToDate       {
+function Convert-LRSerialToDate      {
     param ( $value)
 
     [datetime]::new(2001,1,1,0.0,0, [System.DateTimeKind]::Utc).AddSeconds($value).ToLocalTime()
@@ -530,17 +536,17 @@ function Get-LightRoomKeywordItem    {
         if ($k -is [valuetype]) {
             # admetadata.xmp removed  see https://stackoverflow.com/questions/62825586/lightroom-sqlite-database-binary-xmp-format
             $SQL = @"
-                SELECT rootFolder.absolutePath || folder.pathFromRoot || rootfile.baseName || '.' || rootfile.extension       AS fullName,
-                        rotFolder.absolutePath  || folder.pathFromRoot     AS directory,
-                        image.fileFormat         , image.id_global      , image.id_local            , Camera.Value            AS cameraModel,
-                        rootfile.extension       , image.orientation    , Image.fileWidth  AS width , image.fileHeight        AS height ,
-                        metadata.dateDay         , metadata.dateMonth   , metadata.dateYear         , Image.captureTime       AS dateTaken,
-                        metadata.hasGPS          , metadata.GPSLatitude , metadata.GPSLongitude     , metadata.Aperture       AS apertureValue,
-                        metadata.focalLength     , metadata.flashFired  , rootfile.baseName         , metadata.ShutterSpeed   AS shutterSpeedValue,
-                        IPTC.copyright           , IPTC.caption         , settings.grayscale        ,
-                        image.colorLabels        , image.rating         , image.pick                , metadata.ISOSpeedRating AS ISOSpeed,
-                        admetadata.israwFile     , Image.bitdepth       , image.colorChannels       , LensRef.value           AS lensModel,
-                        tags.name AS keyword
+                SELECT      rootFolder.absolutePath || folder.pathFromRoot || rootfile.baseName || '.' || rootfile.extension      AS fullName,
+                            rootFolder.absolutePath || folder.pathFromRoot AS directory,
+                            image.fileFormat         , image.id_global      , image.id_local            , Camera.Value            AS cameraModel,
+                            rootfile.extension       , image.orientation    , Image.fileWidth  AS width , image.fileHeight        AS height ,
+                            metadata.dateDay         , metadata.dateMonth   , metadata.dateYear         , Image.captureTime       AS dateTaken,
+                            metadata.hasGPS          , metadata.GPSLatitude , metadata.GPSLongitude     , metadata.Aperture       AS apertureValue,
+                            metadata.focalLength     , metadata.flashFired  , rootfile.baseName         , metadata.ShutterSpeed   AS shutterSpeedValue,
+                            IPTC.copyright           , IPTC.caption         , settings.grayscale        ,
+                            image.colorLabels        , image.rating         , image.pick                , metadata.ISOSpeedRating AS ISOSpeed,
+                            admetadata.israwFile     , Image.bitdepth       , image.colorChannels       , LensRef.value           AS lensModel,
+                            tags.name AS keyword
                 FROM        AgLibraryIPTC                  IPTC
                 JOIN        Adobe_images                  image  ON      image.id_local =       IPTC.image
                 JOIN        AgLibraryFile              rootFile  ON   rootfile.id_local =      image.rootFile
@@ -557,11 +563,7 @@ function Get-LightRoomKeywordItem    {
 "@
             $rows = @() + (Get-SQL -Session LR -Quiet -SQL $SQL)
             Write-Verbose -Message "$SQL `r`nReturned $($rows.count) rows"
-            # REMOVED Add-Member -PassThru -MemberType ScriptProperty -name "XAPDescription" -Value {([xml]($this.xmp)).xmpmeta.RDF.Description } |
-            $rows | Add-Member -PassThru -MemberType ScriptProperty -name "Path"           -Value {$this.fullname -replace "/","\"}   |
-                    Add-Member -PassThru -MemberType ScriptProperty -name "FNumber"        -Value {[math]::Round([math]::Sqrt([math]::Pow(2,$this.ApertureValue)),1)} |
-                    Add-Member -PassThru -MemberType ScriptProperty -name "ExposureTime"   -Value {[math]::Round((1/[math]::Pow(2,$this.ShutterSpeedValue)),6)} |
-                ForEach-Object {$_.pstypenames.add("LightRoomItem") ; $_ }
+            $rows | ForEach-Object {[LightRoomItem]$_ }
         }
   }}
 }
@@ -584,7 +586,7 @@ function Add-LightRoomItemKeyword    {
        $Include,
     #Items passed from Get-Lightroomitem
        [Parameter(ParameterSetName='IO',ValueFromPipeline=$true,Mandatory=$true)]
-       [System.Data.DataRow[]]$InputObject,
+       $InputObject,
        [Parameter(Mandatory=$true,Position=1)]
        [string]$Keyword,
      # Path to the LightRoom catalog file  or  Database connection string  e.g. "DSN=LR" or "Driver={SQLite3 ODBC Driver};Database=<<path>>"
@@ -629,7 +631,7 @@ function Rename-LightRoomItem        {
   param (
      # Files to include
        [Parameter(ValueFromPipelineByPropertyName=$true,Mandatory=$true)]
-       [string]$Include,
+       [string[]]$Include,
      # Replace what with what in the name e.g IMG_,DIVE
        [Parameter(Mandatory=$true)]
        [string[]]$Replace,
@@ -679,12 +681,14 @@ function Set-LightRoomItemColor      {
     Puts all files in the music collection current folder into the "Green" group.
 #>
   [CmdletBinding(SupportsShouldProcess=$true)]
+  [alias('Set-LightRoomItemColour')]
   param(
      # Files to include
        [Parameter(ValueFromPipeline=$true,mandatory=$true)]
-       [System.Data.DataRow[]]$InputObject,
+       $InputObject,
      # Path to the LightRoom catalog file
        [Parameter(mandatory=$true)][ValidateSet("Red", "Yellow", "Green", "Blue", "Purple")]
+       [alias('Color')]
        [String]$Colour ,
      # Path to the LightRoom catalog file  or  Database connection string  e.g. "DSN=LR" or "Driver={SQLite3 ODBC Driver};Database=<<path>>"
        [alias('Path')]
@@ -715,7 +719,7 @@ function Set-LightRoomItemFlag       {
   param(
      # Files to include
        [Parameter(ValueFromPipeline=$true,mandatory=$true)]
-       [System.Data.DataRow[]]$InputObject,
+       $InputObject,
      # Path to the LightRoom catalog file
        [Parameter(mandatory=$true)][ValidateRange(-1,1)]
        [Int]$Flag ,
@@ -748,7 +752,7 @@ function Set-LightRoomItemRating     {
   param(
      # Files to include
        [Parameter(ValueFromPipeline=$true,mandatory=$true)]
-       [System.Data.DataRow[]]$InputObject,
+       $InputObject,
      # Path to the LightRoom catalog file
        [Parameter(mandatory=$true)][ValidateRange(0,5)]
        [Int]$Stars ,
@@ -802,7 +806,7 @@ function Test-LightRoomItem          {
   process {
     (Resolve-Path -Path $Path) | ForEach-Object {
         $p        = $_ -replace "'","''"
-        $FileName = (Split-Path -leaf -Path $P )
+        $FileName = (Split-Path -leaf -Path $P )  -replace "\*","%"
         # In SQL Lite , = is case sensitive. Use LIKE for case insensitive
         $result   = [boolean](Get-SQL -Session LR  -Quiet -SQL (@"
           SELECT  folderPath,   AgLibraryFile.baseName,   AgLibraryFile.extension
@@ -815,7 +819,7 @@ function Test-LightRoomItem          {
           WHERE   baseName    like '{0}'
           AND     extension   like '{1}'
           AND     folderPath  like '{2}/'
-"@ -f ($FileName -split "\.")[0],($FileName -split "\.")[1],   ((Split-Path -Parent -Path $P ) -replace "\\","/")))
+"@ -f ($FileName -split "\.")[0],($FileName -split "\.")[1],   ((Split-Path -Parent -Path $P ) -replace "\\","/" )))
         if     ($not)          {$result = -not $result}
         if     ($Passthru -and  $result) {$_}
         elseif (-not $Passthru){$result}
