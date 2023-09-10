@@ -791,7 +791,8 @@ function Read-EXIF         {
     param   (
         #Path To the file
         [parameter(Mandatory=$true,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true )]
-        [alias("FullPath")]$Path ,
+        [alias("FullPath","FullName")]
+        [string]$Path ,
         #Dump raw data with tag ID (with interpretted name),length Value (with interpretted meaning)
         [switch]$Raw,
         #Dump a matching EXIF segment as XML  (the Value is treated as a regular expression)
@@ -807,7 +808,7 @@ function Read-EXIF         {
         $UnicodeEncoding          = New-object -TypeName System.Text.UnicodeEncoding
     }
     process {
-        $Path                      = Resolve-Path -Path $Path
+        $Path                      = Resolve-Path -Path $Path -ErrorAction SilentlyContinue
         if (-not $Path) {
             Write-Warning "'$($PSBoundParameters.path)' did not resolve to any files."
             return
