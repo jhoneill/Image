@@ -3,7 +3,7 @@ if (-not $env:lrPath ) {
     $env:lrPath  = Join-Path -Path ([environment]::GetFolderPath([System.Environment+SpecialFolder]::MyPictures)) -ChildPath "Lightroom\Catalog-2-v12.lrcat"
 }
 
-Class LightRoomItem                  {
+Class LightRoomItem    : icomparable              {
     [double]$ApertureValue
     [string]$BaseName
     [string]$BitDepth
@@ -46,7 +46,15 @@ Class LightRoomItem                  {
                     if ($row.$p -and $row.$p -isnot [dbnull] ) {
                         $this.$p = $row.$p}
         }
+
     }
+     [int] CompareTo([object]$Target) {
+        if (-not $target.FullName) {
+            throw ([System.Management.Automation.MethodInvocationException]::new('Comparison is based on full name')  ) }
+        elseif ($target.fullname -replace '\\','/' -eq $this.fullName) {return 0}
+        elseif ($target.fullname -replace '\\','/' -lt $this.fullName) {return -1}
+        else   {return 1}
+     }
 
     [void]AddToCollection([String]$Collection) {Add-LightRoomCollectionItem -InputObject  $this -Collection $Collection}
     [void]AddKeyword([string]$Keyword)         {Add-LightRoomItemKeyword    -InputObject  $this -Keyword    $Keyword}
