@@ -1,6 +1,6 @@
 ﻿#requires -modules getsql -Version 5
 if (-not $env:lrPath ) {
-    $env:lrPath  = Join-Path -Path ([environment]::GetFolderPath([System.Environment+SpecialFolder]::MyPictures)) -ChildPath "Lightroom\Catalog-2-v12.lrcat"
+    $env:lrPath  = Join-Path -Path ([environment]::GetFolderPath([System.Environment+SpecialFolder]::MyPictures)) -ChildPath "Lightroom\Catalog-2-v13.lrcat"
 }
 
 Class LightRoomItem    : icomparable              {
@@ -102,7 +102,7 @@ function Get-LightRoomItem           {
   [OutputType([LightRoomItem])]
   param (
      # Files to include
-       [Parameter(ValueFromPipelineByPropertyName=$true)]
+       [Parameter(ValueFromPipelineByPropertyName=$true,ValueFromPipeline=$true,Position=0)]
        [Alias("FullName")]
        [string]$Include  = "C:\" ,
      # Path to the LightRoom catalog file  or  Database connection string  e.g. "DSN=LR"

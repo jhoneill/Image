@@ -320,6 +320,7 @@ $PentaxLens        =@{
 $PentaxModel       =@{
         13="Optio 430"                 ;  76180="*ist-D"          ;  76830="K10D"                  ;  77240="K-7"                   ;  77430="K-5"              ; 77680="K-5 II"           ;
      77681="K-5 II s"                  ;  77760="K-3"             ;  77980="K-3 II"                ;  77970="K-1"                   ;  77750="K-50"             ; 78370="K-70"
+     78400="K-1 II"
 }
 $PentaxHiLo        =@{
          0="Low"                       ;      1="Normal"          ;      2="High"                  ;      3="Med-Low"               ;     4="Med-High"          ;
@@ -1124,7 +1125,7 @@ function Read-EXIF         {
                 else {$makernoteresults[0x0012].meaning = "1/{0:#}sec " -f (100000 / $makernoteresults[0x0012].Value )}
             } # Exposure time
             if ($makernoteresults[0x000E]) {
-                if (  $makernoteresults[0x0005].value -eq 77970 ) {
+                if (  $makernoteresults[0x0005].value -in @(77970,78400)) {
                     #K1
                     $t = $PentaxK1FocusPts[$makernoteresults[0x000E].value[0]]
                     if ($makernoteresults[0x000E].value[1] -eq 1 ) { $t += "Expanded area (S)" }
