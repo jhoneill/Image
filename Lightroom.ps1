@@ -1,6 +1,6 @@
 ﻿#requires -modules getsql -Version 5
 if (-not $env:lrPath ) {
-    $env:lrPath  = Join-Path -Path ([environment]::GetFolderPath([System.Environment+SpecialFolder]::MyPictures)) -ChildPath "Lightroom\Catalog-2-v13.lrcat"
+    $env:lrPath  = Join-Path -Path ([environment]::GetFolderPath([System.Environment+SpecialFolder]::MyPictures)) -ChildPath "Lightroom\Catalog-2-v14.lrcat"
 }
 
 Class LightRoomItem    : icomparable              {
@@ -17,11 +17,11 @@ Class LightRoomItem    : icomparable              {
     [string]$DateTaken
     [string]$DateYear
     [string]$Directory
-    [double]$ExposureTime
+    #set as scriptproperty [double]$ExposureTime
     [string]$Extension
     [string]$FileFormat
     [int]$FlashFired
-    [double]$fNumber
+    #set as scriptproperty    [double]$fNumber
     [string]$FocalLength
     [string]$FullName
     [string]$GPSLatitude
@@ -36,6 +36,7 @@ Class LightRoomItem    : icomparable              {
     [string]$Keywords
     [string]$LensModel
     [string]$Orientation
+    [double]$Pick
     [double]$Rating
     [double]$ShutterSpeedValue
     [double]$Width
@@ -46,8 +47,8 @@ Class LightRoomItem    : icomparable              {
                     if ($row.$p -and $row.$p -isnot [dbnull] ) {
                         $this.$p = $row.$p}
         }
-
     }
+
      [int] CompareTo([object]$Target) {
         if (-not $target.FullName) {
             throw ([System.Management.Automation.MethodInvocationException]::new('Comparison is based on full name')  ) }

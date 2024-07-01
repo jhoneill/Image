@@ -1,8 +1,8 @@
 ﻿@{
-    ModuleVersion     =   '2.3.0.0'
+    ModuleVersion     =   '2.3.0.1'
     GUID              =   '{e42ab99b-f281-4412-93cd-5f43427d3c8a}'
     Author            =   'James Brundage, James O''Neill'
-    Copyright         =   'Portions © Microsoft Corporation 2009. All rights reserved. Portions © James O''Neill 2011-2023'
+    Copyright         =   'Portions © Microsoft Corporation 2009. All rights reserved. Portions © James O''Neill 2011-2024'
 
     PowerShellVersion =   '5.0'
     RequiredModules   = @('GetSQL')
