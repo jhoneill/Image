@@ -250,13 +250,21 @@ function Get-LightRoomItem           {
                 LEFT JOIN   AgInternedExifLens          LensRef  ON    LensRef.id_Local =   metadata.lensRef
                 LEFT JOIN   AgInternedExifCameraModel    Camera  ON     Camera.id_local =  metadata.cameraModelRef
 "@
-        if     ($Exports -or $Prints) {$SQL = ($SQL -replace "SELECT ", "SELECT DISTINCT ") + @"
+        if     ($Exports -and $Prints)          {Write-Warning "If -Exports and -Prints are both specified, -Prints is ignored."}
+        if     ($Exports -and ((Get-SQL -Session LR -Quiet -Table "Adobe_variablesTable"  -Where "name" -like "Adobe_DBVersion").Value ) -gt "1303") { #version is a string for 13.03 upwards...
+                                        $SQL = ($SQL -replace "SELECT ", "SELECT DISTINCT ") + @"
+
+                JOIN        AgLibraryImageAttributes LibAttribs on  image.id_local = LibAttribs.image
+                WHERE       LibAttribs.lastExportTimestamp > 1
+                  AND
+"@
+        }
+        elseif ($Exports -or  $Prints) {$SQL = ($SQL -replace "SELECT ", "SELECT DISTINCT ") + @"
 
                 JOIN        Adobe_libraryImageDevelopHistoryStep history on  image.id_local = history.image
                 WHERE       history.name LIKE '$(if ($Exports) {'Export'} elseif ($Prints) {'Print'})%'
                   AND
 "@
-                if ($Exports -and $Prints)          {Write-Warning "If -Exports and -Prints are both specified, -Prints is ignored."}
         }
         elseif ($Where -eq "Keyword" -and -not $EQ) {Write-Warning "Keywords only work with -EQ"}
         elseif ($Where -eq "Keyword") {
@@ -798,7 +806,7 @@ function Test-LightRoomItem          {
   [OutputType([Boolean])]
   Param(
       # Path to check
-        [Parameter(ValueFromPipelineByPropertyName=$true)]
+        [Parameter(ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true)]
         [Alias("FullName")]
         $Path ,
       # Pass matching files on to the next step
