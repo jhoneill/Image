@@ -42,19 +42,18 @@ Class LightRoomItem    : icomparable              {
     [double]$Width
 
     LightRoomItem()  {}
-    LightRoomItem([System.Data.DataRow]$row ) {
+    LightRoomItem([System.Data.DataRow]$row ) { #if results contain DBNulls we can't simply cast the rows to lightroomItems
         foreach ($p in $this.psobject.Properties.Name) {
-                    if ($row.$p -and $row.$p -isnot [dbnull] ) {
-                        $this.$p = $row.$p}
+            if  ($row.$p -and $row.$p -isnot [dbnull] ) {$this.$p = $row.$p}
         }
     }
 
-     [int] CompareTo([object]$Target) {
+    [int] CompareTo([object]$Target) {
         if (-not $target.FullName) {
             throw ([System.Management.Automation.MethodInvocationException]::new('Comparison is based on full name')  ) }
         elseif ($target.fullname -replace '\\','/' -eq $this.fullName) {return 0}
-        elseif ($target.fullname -replace '\\','/' -lt $this.fullName) {return -1}
-        else   {return 1}
+        elseif ($target.fullname -replace '\\','/' -lt $this.fullName) {return 1}
+        else   {return -1}
      }
 
     [void]AddToCollection([String]$Collection) {Add-LightRoomCollectionItem -InputObject  $this -Collection $Collection}
