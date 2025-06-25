@@ -2,7 +2,7 @@
 <Configuration>
   <ViewDefinitions>
     <View>
-      <Name>LightRoomItem</Name>
+      <Name>LightRoomItemList</Name>
       <ViewSelectedBy>
         <TypeName>LightRoomItem</TypeName>
       </ViewSelectedBy>
@@ -87,7 +87,7 @@
       </ListControl>
     </View>
         <View>
-      <Name>process</Name>
+      <Name>LightRoomItemTable</Name>
       <ViewSelectedBy>
         <TypeName>LightRoomItem</TypeName>
       </ViewSelectedBy>
