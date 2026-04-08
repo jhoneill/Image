@@ -837,6 +837,13 @@ function Read-EXIF         {
         $BytesRead                = $Stream.Read($Array,0 ,50)
         if ($BytesRead -lt 50)    { Write-Warning -Message "$Path seems impossibly small - could only read $BytesRead bytes - skipping"; return}
     #region find blocks in JPEGs or PhotoShop files: we should emerge from here knowing where the EXIF is (or exit having dumped a JPG segment as hex or XML)
+        $fujijpgOffset            = 0
+        if    ([string]::new($Array[0..15]) -EQ "FUJIFILMCCD-RAW ") {
+            $BytesRead            = $Stream.Read($Array,0 ,38)
+            $fujijpgOffset        =  16777216 *$array[34] + 65536 * $Array[35] + 256 *$Array[36] + $Array[37]
+            $BytesRead            = $Stream.Read($Array,0 ,($fujijpgOffset-38-50))
+            $BytesRead            = $Stream.Read($Array,0 ,50)
+        }
         if     ([string]$Array[0..1]  -eq "255 216") {
              #If the file is a JPG bytes 0&1 will be the marker 0xFFD8. Bytes 2 & 3should be the marker for an App block.
              #Bytes 4&5 hold the size of the block, then we hope to find the the signature Exif. We may need to look at more than one block to find it
@@ -916,7 +923,7 @@ function Read-EXIF         {
              }
 
              $Stream.Position          = $Dataoffset = ($SegResults | Where-Object {$_.tagID -eq "ffe1" -and $_.tagname -eq "Exif"} |
-                                             Microsoft.PowerShell.Utility\Select-Object -First 1 -ExpandProperty offset) + 10 #10 bytes is 2 for segment ID. 2 for segment length, 4 for name 'EXIF' + 2 for 00-00 marking End of header. Next two bytes indicate big endian or little endian
+                                             Microsoft.PowerShell.Utility\Select-Object -First 1 -ExpandProperty offset) + 10 + $fujijpgOffset #10 bytes is 2 for segment ID. 2 for segment length, 4 for name 'EXIF' + 2 for 00-00 marking End of header. Next two bytes indicate big endian or little endian
              $BytesRead                = $Stream.Read($Array,0 ,16)
         }
         elseif ([string]$Array[0..11] -eq "56 66 80 83 0 1 0 0 0 0 0 0") {
@@ -1397,6 +1404,9 @@ function Read-EXIF         {
             # However Apples's offsets appear to calculated differently (they're off by 4 compared with canon and Pentax) so I haven't bothered.
             if ($makernotes[10].value -eq 3) {$PropHash["AppleHDRType"] = 'HDR Image'      }
             elseif ($makernotes[10].value -eq 4) {$PropHash["AppleHDRType"] = 'Original Image' }
+        }
+        elseif ($makerNotePreamble -match "FUJIFILM") {
+            $makernotes = Read-ExifFD -Stream $Stream -ImgDirStart ($makernoteoffset +8 + $Dataoffset) -LittleEndian $true -tagnames @{} -dataoffset $Dataoffset
         }
     #endregion
     #region Process IPTC & XAP Data & Apps which write a comment as a section name

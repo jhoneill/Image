@@ -13,6 +13,7 @@
 . $psScriptRoot\Get-EXIF.ps1
 . $psScriptRoot\Get-IndexedItem.ps1
 . $psScriptRoot\Get-PolaroidBorder.ps1
+. $psScriptRoot\Get-PrinterStatus.ps1
 . $psScriptRoot\Helper.ps1
 . $psScriptRoot\Lightroom.ps1
 #. $psScriptRoot\new-logonBackground.ps1

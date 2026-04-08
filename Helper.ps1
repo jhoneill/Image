@@ -179,3 +179,104 @@ function Get-FirstAvailableDriveLetter {
     Write-Warning -Message "No free drive letters found"
 }
 
+function ConvertTo-HSL {
+    # adapted from http://support.microsoft.com/kb/29240
+    param   (
+        [Parameter(ValueFromPipelineByPropertyName=$true)]
+        [Alias('R')]
+        $Red ,
+        [Parameter(ValueFromPipelineByPropertyName=$true)]
+        $Green ,
+        [Parameter(ValueFromPipelineByPropertyName=$true)]
+        $Blue ,
+        $RGBMax = 255,
+        $HSLMax = 255
+    )
+    process {
+        $cmax   = [math]::Max([math]::Max($Red, $Green) ,$Blue)
+        $cmin   = [math]::Min([math]::Min($Red, $Green) ,$Blue)
+        $l      = ( (($cmax + $cmin) * $HSLMax) + $RGBMax ) / (2 * $RGBMax)
+        if ($cMax -eq $cMin) {         # r=g=b - - > achromatic case
+            $s  = 0                    # saturation
+            $h  = ($HSLMAX * 2 / 3)    # hue
+        }
+        else {                         # chromatic case
+            #saturation
+            if ($l -le ($HSLMax / 2)) {$s = ( (($cMax - $cMin) * $HSLMax) + (          (    $cMax + $cMin) / 2) ) / (              $cMax + $cMin) }
+            else                      {$s = ( (($cMax - $cMin) * $HSLMax) + ((2 * $RGBMax - $cMax - $cMin) / 2) ) / (2 * $RGBMax - $cMax - $cMin)}
+
+            # hue
+            $Rdelta     = ( (($cMax - $Red)   * ($HSLMax / 6)) + (($cMax - $cMin) / 2) ) / ($cMax - $cMin)
+            $Gdelta     = ( (($cMax - $Green) * ($HSLMax / 6)) + (($cMax - $cMin) / 2) ) / ($cMax - $cMin)
+            $Bdelta     = ( (($cMax - $Blue)  * ($HSLMax / 6)) + (($cMax - $cMin) / 2) ) / ($cMax - $cMin)
+
+            if     ($Red   -eq $cMax) { $h  = $Bdelta - $Gdelta}
+            elseif ($Green -eq $cMax) { $h  =      ($HSLMax  / 3) + $Rdelta - $Bdelta}
+            else                      { $h  = ((2 * $HSLMax) / 3) + $Gdelta - $Rdelta}
+
+            if ($h -lt 0)         {    $h += $HSLMax}
+            if ($h -gt $HSLMax)   {    $h -= $HSLMax}
+        }
+        [pscustomobject][ordered]@{
+            Hue        = $h
+            Saturation = $s
+            Lightness   =$l
+        }
+    }
+}
+
+function Convert-HSLToRGB {
+    param (
+        [Parameter(ValueFromPipelineByPropertyName=$true)]
+        $Hue,
+        [Parameter(ValueFromPipelineByPropertyName=$true)]
+        $Saturation,
+        [Parameter(ValueFromPipelineByPropertyName=$true)]
+        $Lightness
+    )
+    begin {
+        function hueToRgb {
+            param  ($p, $q, $t)
+            if     ($t -lt 0)    {$t += 1}
+            if     ($t -gt 1)    {$t -= 1}
+            if     ($t -lt 1/6)  {$p + ($q - $p) * 6 * $t}
+            elseif ($t -lt 1/2)  {$q}
+            elseif ($t -lt 2/3)  {$p + ($q - $p) * (2/3 - $t) * 6}
+            else   {$p}
+        }
+    }
+    process {
+      #  if ($Hue -lt 1 ) {$Hue = $Hue +1}
+        $q = $Lightness -lt 0.5 ? $Lightness * (1 + $Saturation) : $Lightness + $Saturation - $Lightness * $Saturation;
+        $p = 2 * $Lightness - $q;
+        [pscustomobject][ordered]@{
+            Red   = [int]((hueToRgb -p $p -q $q -t ($Hue + 1/3)) * 255)
+            Green = [int]((hueToRgb -p $p -q $q -t  $Hue)        * 255)
+            Blue  = [int]((hueToRgb -p $p -q $q -t ($Hue - 1/3)) * 255)
+        } | Add-Member -PassThru -MemberType ScriptProperty -Name Hex -Value {('#{0:x2}{1:x2}{2:x2}' -f $this.red, $this.Green, $this.blue)}
+    }
+}
+
+function Convert-HSToEpson {
+   param (
+        [Parameter(ValueFromPipelineByPropertyName=$true)]
+        [Alias('H')]
+        $Hue,
+        [Parameter(ValueFromPipelineByPropertyName=$true)]
+        [Alias('S')]
+        $Saturation,
+        $HMax = 360,
+        $Smax = 100
+   )
+   process {
+        # Adobe etc give sat as polar co-ordinate 0-Smax.  Epson is rectangular co-ordinates max length 75
+        $length     =           75   * $Saturation / $Smax
+        # Epson go round anti clockwise and offset 60 degrees. Convert the angle and then convert to radians
+        $degrees    =  (420 - (360   * $Hue / $Hmax)) % 360
+        $radians    = 2 * [math]::pi * $degrees / 360
+        #Now convert length and angle to Polar
+        $x = [math]::Sin($radians)   * $length
+        $y = [math]::Cos($radians)   * $length
+        [pscustomobject][ordered]@{Horizontal=([int]$x); Vertical=([int]$y)}
+   }
+}
