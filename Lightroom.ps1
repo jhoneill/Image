@@ -702,7 +702,7 @@ function Set-LightRoomItemColor      {
      # Files to include
        [Parameter(ValueFromPipeline=$true,mandatory=$true)]
        $InputObject,
-     # Path to the LightRoom catalog file
+     # One of the 5 support flag colours in lightroom
        [Parameter(mandatory=$true)][ValidateSet("Red", "Yellow", "Green", "Blue", "Purple")]
        [alias('Color')]
        [String]$Colour ,
@@ -736,7 +736,7 @@ function Set-LightRoomItemFlag       {
      # Files to include
        [Parameter(ValueFromPipeline=$true,mandatory=$true)]
        $InputObject,
-     # Path to the LightRoom catalog file
+     # Flag +1 = pick , -1 = reject , 0 = unflagged
        [Parameter(mandatory=$true)][ValidateRange(-1,1)]
        [Int]$Flag ,
      # Path to the LightRoom catalog file  or  Database connection string  e.g. "DSN=LR" or "Driver={SQLite3 ODBC Driver};Database=<<path>>"
@@ -769,7 +769,7 @@ function Set-LightRoomItemRating     {
      # Files to include
        [Parameter(ValueFromPipeline=$true,mandatory=$true)]
        $InputObject,
-     # Path to the LightRoom catalog file
+     # Number of stars (0 to 5)
        [Parameter(mandatory=$true)][ValidateRange(0,5)]
        [Int]$Stars ,
      # Path to the LightRoom catalog file  or  Database connection string  e.g. "DSN=LR" or "Driver={SQLite3 ODBC Driver};Database=<<path>>"

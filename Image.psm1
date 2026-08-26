@@ -9,8 +9,9 @@
 . $psScriptRoot\ConvertTo-GPXWPT.ps1
 . $psScriptRoot\ConvertTo-Jpeg.ps1
 . $psScriptRoot\Copy-Image.ps1
+. $PSScriptRoot\EXIF_Tool.ps1
+#. $psScriptRoot\Get-EXIF.ps1
 . $psScriptRoot\Get-Image.ps1
-. $psScriptRoot\Get-EXIF.ps1
 . $psScriptRoot\Get-IndexedItem.ps1
 . $psScriptRoot\Get-PolaroidBorder.ps1
 . $psScriptRoot\Get-PrinterStatus.ps1

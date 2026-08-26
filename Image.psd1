@@ -7,7 +7,7 @@
     PowerShellVersion =   '5.0'
     RequiredModules   = @('GetSQL')
     ScriptsToProcess  = @('Lightroom.ps1')
-    FormatsToProcess  = @('Lightroom.Format.ps1xml')
+    FormatsToProcess  = @('Lightroom.Format.ps1xml', 'ExifTool.Format.ps1xml')
     RootModule        =   'Image.psm1'
 
     FunctionsToExport = @('Add-ConversionFilter',
@@ -36,6 +36,7 @@
                           'Copy-SuutoDBTOLightRoom',
                           'Get-BingPhotos',
                           'Get-CSVGPSData',
+                          'Get-Exif',
                           'Get-GPSBearing',
                           'Get-GPSDistance',
                           'Get-GPXData',
@@ -83,6 +84,8 @@
                           'Copy-Image.ps1',
                           'Get-Image.ps1',
                           'Get-IndexedItem.ps1',
+                          'EXIF_Tool.ps1',
+                          'exifTool.Format.ps1xml'
                           'Helper.ps1',
                           'Lightroom.Format.ps1xml',
                           'Lightroom.ps1',
