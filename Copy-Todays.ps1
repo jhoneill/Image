@@ -2,13 +2,13 @@
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSingularNouns','',Justification='Posessive not plural ')]
 param()
 Function Copy-Todays {
-    [CmdletBinding()]
     <#
     .SYNOPSIS
         Copies todays files from (by default) the DCIM folder on a memory, to (by default) the current folder, optionally renaming as we go
     .EXAMPLE
         Copy-Todays -Rename "^IM","Dive"
     #>
+    [CmdletBinding()]
     param  (
         # Copy from
         [string]$Path        = "D:\DCIM",

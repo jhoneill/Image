@@ -35,6 +35,7 @@ Class LightRoomItem    : icomparable              {
     [int]$IsRawFile
     [string]$Keywords
     [string]$LensModel
+    [int]$lensRef
     [string]$Orientation
     [double]$Pick
     [double]$Rating
@@ -235,8 +236,8 @@ function Get-LightRoomItem           {
                             metadata.dateDay         , metadata.dateMonth   , metadata.dateYear         , Image.captureTime       AS dateTaken,
                             metadata.hasGPS          , metadata.GPSLatitude , metadata.GPSLongitude     , metadata.Aperture       AS apertureValue,
                             metadata.focalLength     , metadata.flashFired  , rootfile.baseName         , metadata.ShutterSpeed   AS shutterSpeedValue,
-                            IPTC.copyright           , IPTC.caption         , settings.grayscale        ,
-                            image.colorLabels        , image.rating         , image.pick                , metadata.ISOSpeedRating AS ISOSpeed,
+                            IPTC.copyright           , IPTC.caption         , settings.grayscale        , metadata.ISOSpeedRating AS ISOSpeed,
+                            image.colorLabels        , image.rating         , image.pick                , metadata.lensRef ,
                             admetadata.israwFile     , image.bitdepth       , image.colorChannels       , LensRef.value           AS lensModel
                 FROM        AgLibraryIPTC                  IPTC
                 JOIN        Adobe_images                  image  ON      image.id_local =       IPTC.image
