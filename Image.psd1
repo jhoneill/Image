@@ -34,6 +34,7 @@
                           'Copy-Image',
                           'Copy-SuutoDBTOImage',
                           'Copy-SuutoDBTOLightRoom',
+                          'Copy-Todays',
                           'Get-BingPhotos',
                           'Get-CSVGPSData',
                           'Get-Exif',
