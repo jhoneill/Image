@@ -867,6 +867,53 @@ Param (
        Format-Table       -Property  Count,@{n="Bytes";e={$_.sum.tostring("N0")}}
 }
 
+function Copy-LightroomLensID {
+    [CmdletBinding(SupportsShouldProcess,ConfirmImpact='High')]
+    <#
+        .SYNOPSIS
+        Copies the Lens ID from one photo to one or more others
+        .EXAMPLE
+        Copy-LightroomLensID -Source IS210266 -Destination "is209760", "is209766", "is209768", "is209771", "IS210253", "IS210254", "IS210257", "IS210258", "IS210258"
+        Uses a file  IS210266.* in any directory as the source for the lens.
+        An error occurs if no such file is found, or more than one file is matched or a single file has no lens ID
+        It then updates 9 images, here the name may match more than one picture and if no match is found the name will be ignored.
+    #>
+    Param (
+        #Unique partial filename or a Lightroom object representing the file that data will be copied from.
+        [parameter(Mandatory=$true)]
+        $Source,
+        #Partial filename(s) or lightroom object(s) representing the file(s) that data will be copied to
+        [parameter(Mandatory=$true,ValueFromPipeline=$true)]
+        $Destination,
+        #Specified to prevent confirmation dialogs appearing
+        [Switch]$Force
+    )
+    begin {
+        if   ($Source.gettype().name -eq "LightroomItem") { $right = $Source}
+        else {$right = Get-LightRoomItem $Source  }
+        if   ($right.count -ne 1 -or -not $right.lensref) {
+            throw "Cannot get lens ref for supplied source"
+        }
+    }
+    process {
+        foreach ($d in $Destination) {
+            if ($d.gettype().name -eq "LightroomItem") {
+                    if ($Force -or $PSCmdlet.ShouldProcess($d.path, "Update lens to $($right.LensModel)")) {
+                        Get-SQL -Session LR -update AgharvestedExifMetadata -Set "lensRef" -Values   $right.lensRef -Where image -EQ $d.id_local -Confirm:$false
+                    }
+            }
+            else  {
+                $expandedDestination = Get-LightRoomItem $d
+                foreach ($e in $expandedDestination) {
+                    if ($Force -or $PSCmdlet.ShouldProcess($e.path, "Update lens to $($right.LensModel)")) {
+                        Get-SQL -Session LR -update AgharvestedExifMetadata -Set "lensRef" -Values   $right.lensRef -Where image -EQ $e.id_local -Confirm:$false
+                    }
+                }
+            }
+        }
+    }
+}
+
 function Close-LightRoom             {
     Get-Sql -Session LR -Close -WarningAction SilentlyContinue
 }
