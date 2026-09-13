@@ -1,5 +1,7 @@
 #PSUseSingularNouns
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSingularNouns','',Justification='Posessive not plural ')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments','',Justification='False positive when introduced in if/else ')]
+
 param()
 Function Copy-Todays {
     <#
