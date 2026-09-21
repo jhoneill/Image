@@ -9,7 +9,6 @@
 . $psScriptRoot\ConvertTo-GPXWPT.ps1
 . $psScriptRoot\ConvertTo-Jpeg.ps1
 . $psScriptRoot\Copy-Image.ps1
-. $psScriptRoot\Copy-LightroomLensID
 . $psScriptRoot\Copy-Todays.ps1
 . $PSScriptRoot\EXIF_Tool.ps1
 #. $psScriptRoot\Get-EXIF.ps1
