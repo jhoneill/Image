@@ -33,7 +33,7 @@ Function Copy-Todays {
         Write-Error "Destination path not found : $Destination" ; return
     }
     # Only copy files from the right time if the number isn't in the destination. If we louse up renaming don't make a second copy.
-    $filesToCopy = Get-childitem $Path -Recurse -File  | Where-Object  {$_.LastWriteTime -GT $cutOff -and -not (Test-Path (Join-path $Destination ($_.name -replace '^\D+','*' ) ))}  |
+    $filesToCopy = Get-childitem $Path -Recurse -File  | Where-Object  {$_.LastWriteTime -GT $cutOff -and -not (Test-Path (Join-path $Destination ($_.name -replace '^\D+','*' ) ))}
 
     if (-not $Replace) {
         $filesCopied = $filesToCopy  | Copy-Item -Destination $Destination -Verbose -PassThru
