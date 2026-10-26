@@ -1,5 +1,9 @@
 function Get-PrinterStatus {
-    param ($PrinterIP  = "192.168.0.181")
+    param (
+        $PrinterIP  = "192.168.0.181",
+        [int]$History
+    )
+
     enum SNMPPrinterStatus {
         Other       = 1
         Unknown     = 2
@@ -25,6 +29,21 @@ function Get-PrinterStatus {
     Hours                  = 11
     Feet                   = 16
     Meters                 = 17
+    }
+
+    if ($History) {
+        Get-EventLog -LogName Application -Source  PSPrintStatus -Newest $History |
+             Where-Object -Property Message -Match "[\r\n]+\s+\d" |
+                ForEach-Object {
+                    $d = [pscustomobject]@{TimeGenerated= $_.TimeGenerated}
+                    $_.message -split "[\r\n]+" | ForEach-Object {
+                        if ($_ -match "^\s*(\d+)\s+(.*) \w\d\d") {
+                           Add-Member -InputObject $d -NotePropertyName $matches[2].replace(" Ink Cartridge","") -NotePropertyValue ([int]$Matches[1])
+                        }
+                    }
+                $d } |
+                     Format-Table -Property *
+        return
     }
 
     #I have used the SNMP COM object to save installing the SNMP module.
@@ -53,13 +72,20 @@ function Get-PrinterStatus {
     $consumableMaximums = $snmp.GetTree(".1.3.6.1.2.1.43.11.1.1.8.1")
     $snmp.Close()
 
-    Write-host "$printerModelName, $printerFirmware, Serial no: $printerSerialNo. $printCountTotal $PrintCountUnit printed, Up-time: $printerUptime, Status: $printerStatus"
+    $message = "$printerModelName, $printerFirmware, Serial no: $printerSerialNo. $printCountTotal $PrintCountUnit printed"
+    Write-host "$message, Up-time: $printerUptime, Status: $printerStatus"
 
-    for ($i=0; $i -lt $consumableNames.length/2; $i++) {[pscustomobject][ordered]@{
+    $message += "`r`nLevel   Name                                     "
+    for ($i=0; $i -lt $consumableNames.length/2; $i++) {
+        $message += "`r`n{1,5}   {0,-40}  " -f $consumableNames[1,$i], $consumableLevels[1,$i]
+        Write-Output ([pscustomobject][ordered]@{
             Name    = $consumableNames[1,$i];
             Level   = $consumableLevels[1,$i]
             Max     = $consumableMaximums[1,$i]
-    }}
+    })
+    }
+    #To allow event logging to work, use an elevated instance of Powershell to run   New-EventLog -Source PSPrintStatus -LogName application
+    Write-EventLog -LogName Application -Source PSPrintStatus -EventId 101 -Message $message
 }
 <#
 $MIB_INFO                           = [ordered]@{
