@@ -3,7 +3,7 @@ if (-not $env:lrPath ) {
     $env:lrPath  = Join-Path -Path ([environment]::GetFolderPath([System.Environment+SpecialFolder]::MyPictures)) -ChildPath "Lightroom\Catalog-2-v14.lrcat"
 }
 
-Class LightRoomItem    : icomparable              {
+Class LightRoomItem    : icomparable {
     [double]$ApertureValue
     [string]$BaseName
     [string]$BitDepth
@@ -12,6 +12,8 @@ Class LightRoomItem    : icomparable              {
     [string]$ColorChannels
     [string]$ColorLabels
     [string]$Copyright
+    [String]$CroppedHeight
+    [string]$CroppedWidth
     [string]$DateDay
     [string]$DateMonth
     [string]$DateTaken
@@ -118,7 +120,7 @@ function Get-LightRoomItem           {
        [parameter(ParameterSetName="WhereLT",  Mandatory=$true)]
        [parameter(ParameterSetName="WhereLike",Mandatory=$true)]
        [parameter(ParameterSetName="WhereNoLi",Mandatory=$true)]
-       [ValidateSet("Aperture", "CameraModel", "Caption", "ColorLabels", "Copyright", "DateTaken", "Extension", "Fileformat",  "FocalLength", "HasGPS", "keyword", "IsoSpeed", "IsRawFile",  "LensModel", "Pick", "Rating", "ShutterSpeed")]
+       [ValidateSet("Aperture", "CameraModel", "Caption", "ColorLabels", "Copyright", "DateTaken", "Extension", "Fileformat",  "FocalLength", "HasGPS", "Keyword", "IsoSpeed", "IsRawFile",  "LensModel", "Pick", "Rating", "ShutterSpeed", "FileWidth","FileHeight","CroppedWidth","CroppedHeight")]
        $Where,
        [parameter(ParameterSetName="WhereGT",  Mandatory=$true)]
        [string]$GT,
@@ -237,8 +239,9 @@ function Get-LightRoomItem           {
                             metadata.hasGPS          , metadata.GPSLatitude , metadata.GPSLongitude     , metadata.Aperture       AS apertureValue,
                             metadata.focalLength     , metadata.flashFired  , rootfile.baseName         , metadata.ShutterSpeed   AS shutterSpeedValue,
                             IPTC.copyright           , IPTC.caption         , settings.grayscale        , metadata.ISOSpeedRating AS ISOSpeed,
-                            image.colorLabels        , image.rating         , image.pick                , metadata.lensRef ,
-                            admetadata.israwFile     , image.bitdepth       , image.colorChannels       , LensRef.value           AS lensModel
+                            image.bitdepth           , image.colorChannels  , settings.croppedHeight    , settings.croppedWidth,
+                            image.colorLabels        , image.rating         , image.pick                ,
+                            admetadata.israwFile     , metadata.lensRef     , LensRef.value AS lensModel
                 FROM        AgLibraryIPTC                  IPTC
                 JOIN        Adobe_images                  image  ON      image.id_local =       IPTC.image
                 JOIN        AgLibraryFile              rootFile  ON   rootfile.id_local =      image.rootFile
@@ -867,7 +870,7 @@ Param (
        Format-Table       -Property  Count,@{n="Bytes";e={$_.sum.tostring("N0")}}
 }
 
-function Copy-LightroomLensID {
+function Copy-LightroomLensID        {
     [CmdletBinding(SupportsShouldProcess,ConfirmImpact='High')]
     <#
         .SYNOPSIS
