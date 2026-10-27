@@ -1,6 +1,11 @@
+if ($IsLinux -or $IsMacOS) {return} # uses com, and windows event log.
+#To allow event logging to work, use an elevated instance of Powershell to run>     New-EventLog -Source PSPrintStatus -LogName application
+
 function Get-PrinterStatus {
     param (
+        # Default IP address for an SNMP queryable printer
         $PrinterIP  = "192.168.0.181",
+        # On Windows get the the
         [int]$History
     )
 
@@ -35,10 +40,12 @@ function Get-PrinterStatus {
         Get-EventLog -LogName Application -Source  PSPrintStatus -Newest $History |
              Where-Object -Property Message -Match "[\r\n]+\s+\d" |
                 ForEach-Object {
-                    $d = [pscustomobject]@{TimeGenerated= $_.TimeGenerated}
-                    $_.message -split "[\r\n]+" | ForEach-Object {
-                        if ($_ -match "^\s*(\d+)\s+(.*) \w\d\d") {
-                           Add-Member -InputObject $d -NotePropertyName $matches[2].replace(" Ink Cartridge","") -NotePropertyValue ([int]$Matches[1])
+                    if ($_.message -match "(\d+)\s(\w+)\sprinted" ) {
+                        $d = [pscustomobject]@{TimeGenerated= $_.TimeGenerated;$Matches[2]=[int]($matches[1])}
+                        $_.message -split "[\r\n]+" | ForEach-Object {
+                            if ($_ -match "^\s*(\d+)\s+(.*) \w\d\d") {
+                                Add-Member -InputObject $d -NotePropertyName $matches[2].replace(" Ink Cartridge","") -NotePropertyValue ([int]$Matches[1])
+                            }
                         }
                     }
                 $d } |
@@ -46,7 +53,7 @@ function Get-PrinterStatus {
         return
     }
 
-    #I have used the SNMP COM object to save installing the SNMP module.
+    #region get data from printing using SNMP. I have used the SNMP COM object to save installing the SNMP module.
     $snmp               = New-Object -ComObject olePrn.OleSNMP
     $snmp.open($PrinterIP, 'public', 2, 1000)
     $printerUptime      = [timespan]::FromSeconds( $snmp.get(
@@ -71,9 +78,9 @@ function Get-PrinterStatus {
     $consumableLevels   = $snmp.GetTree(".1.3.6.1.2.1.43.11.1.1.9.1")   # EPSON $snmp.GetTree('.1.3.6.1.4.1.1248.1.2.2.28.1.1.2.1')
     $consumableMaximums = $snmp.GetTree(".1.3.6.1.2.1.43.11.1.1.8.1")
     $snmp.Close()
-
+    #endregion
     $message = "$printerModelName, $printerFirmware, Serial no: $printerSerialNo. $printCountTotal $PrintCountUnit printed"
-    Write-host "$message, Up-time: $printerUptime, Status: $printerStatus"
+    Write-Output "$message, Up-time: $printerUptime, Status: $printerStatus"
 
     $message += "`r`nLevel   Name                                     "
     for ($i=0; $i -lt $consumableNames.length/2; $i++) {
@@ -84,9 +91,19 @@ function Get-PrinterStatus {
             Max     = $consumableMaximums[1,$i]
     })
     }
-    #To allow event logging to work, use an elevated instance of Powershell to run   New-EventLog -Source PSPrintStatus -LogName application
+
+    #Write status to the windows event log #
     Write-EventLog -LogName Application -Source PSPrintStatus -EventId 101 -Message $message
 }
+
+#Watch for print job terminating and run get-PrinterStatus silently to log printer state .
+Unregister-Event            -SourceIdentifier psprintstatus -ErrorAction SilentlyContinue
+Register-CimIndicationEvent -SourceIdentifier psprintstatus -Action {$null = Get-PrinterStatus} -Query @"
+        SELECT * FROM CIM_InstDeletion within 10
+        WHERE    TargetInstance ISA 'Win32_PrintJob' AND
+                TargetInstance.Name like 'SC-P700%'
+"@                       #   ^^^^ Like 'start_of_your_printer_Name%'
+
 <#
 $MIB_INFO                           = [ordered]@{
 #      "Print inputs"  names/status    = "1.3.6.1.2.1.43.8.2.1.13.1" / "1.3.6.1.2.1.43.8.2.1.11.1"
